@@ -1,0 +1,88 @@
+@startuml c4_container_churn
+
+!include <C4/C4_Container>
+
+LAYOUT_LEFT_RIGHT()
+LAYOUT_WITH_LEGEND()
+
+title C4 Container — Churn Prediction Service (#8)
+
+System_Ext(bankInternal, "CRM System", "Legacy", "Customer Profile & Interactions")
+
+System_Boundary(churnSystem, "Churn Prediction") {
+    Container(gateway8, "API Gateway", "Gateway", "Request Routing")
+
+    Container(model8, "Churn Model", "Random Forest", "Predict 3-month churn prob")
+
+    Container(retention8, "Retention Scoring", "Business Logic", "Customer Value & Risk")
+
+    Container(campaign8, "Campaign Dispatcher", "Decision Engine", "Route to retention offer")
+
+    Container(custDb, "Customer DB", "PostgreSQL", "Customer Profile, Balances")
+
+    Container(behaviorDw, "Behavior Analytics", "Data Lake", "24-month usage patterns")
+
+    Container(audit8, "Audit Trail", "PostgreSQL", "Predictions & Campaigns")
+}
+
+System_Ext(campaignMgr, "Campaign Manager", "Email/SMS Service", "Send retention offers")
+
+System_Ext(abTest, "A/B Testing", "Analytics", "Test offer effectiveness")
+
+System_Ext(monitor8, "Monitoring", "Prometheus", "Track conversions")
+
+Rel(bankInternal, gateway8, "Customer Status Check")
+
+Rel(gateway8, model8, "Get Churn Prediction")
+
+Rel(model8, behaviorDw, "Fetch Usage Patterns")
+
+Rel(behaviorDw, retention8, "Behavioral Data")
+
+Rel(retention8, campaign8, "Churn Score + Value")
+
+Rel(campaign8, campaignMgr, "Create Campaign")
+
+Rel(campaign8, custDb, "Store Prediction")
+
+Rel(campaign8, abTest, "Log for Testing")
+
+Rel(campaign8, audit8, "Log Decision")
+
+Rel(campaign8, gateway8, "Return Score")
+
+Rel(monitor8, model8, "Monitor")
+Rel(monitor8, campaign8, "Monitor Conversions")
+
+note right of model8
+Random Forest Model:
+• 3-month churn probability
+• Revenue impact estimate
+• Latency: <1s (batch OK)
+• Retrain: monthly
+• Training: 24mo behavior
+end note
+
+note right of retention8
+Risk Levels:
+• Green: <5% → No action
+• Yellow: 5-20% → Email offer
+• Red: >20% → Phone + offer
+end note
+
+note right of campaign8
+Campaign Strategy:
+• Green: Monitor (low cost benefit)
+• Yellow: Email personalized offer
+• Red: Dedicated call + exclusive
+end note
+
+note right of abTest
+A/B Test:
+• Control vs Offer A vs B
+• Measure: retention rate
+• Duration: 4 weeks
+• Success: retention +5%
+end note
+
+@enduml
